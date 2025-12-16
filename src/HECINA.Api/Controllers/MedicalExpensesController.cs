@@ -53,4 +53,22 @@ public class MedicalExpensesController : ControllerBase
             return StatusCode(500, "An error occurred while retrieving the medical expense");
         }
     }
+
+    [HttpGet("person/{identificationNumber}")]
+    public async Task<IActionResult> GetExpensesForPerson(
+        string identificationNumber,
+        [FromQuery] string? skipToken = null,
+        [FromQuery] int top = 5)
+    {
+        try
+        {
+            var expenses = await _repository.GetExpensesForPersonAsync(identificationNumber, skipToken, top);
+            return Ok(expenses);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving medical expenses for person {IdentificationNumber}", identificationNumber);
+            return StatusCode(500, "An error occurred while retrieving medical expenses for the person");
+        }
+    }
 }
