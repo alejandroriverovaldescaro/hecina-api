@@ -20,37 +20,18 @@ public class MedicalExpensesController : ControllerBase
         _logger = logger;
     }
 
-    [HttpGet]
-    public async Task<IActionResult> GetAll()
+    [HttpGet("by-person")]
+    public async Task<IActionResult> GetByPerson([FromQuery] string identificationNumber, [FromQuery] string? skipToken, [FromQuery] int top = 10)
     {
         try
         {
-            var expenses = await _repository.GetAllAsync();
+            var expenses = await _repository.GetExpensesByPersonAsync(identificationNumber, skipToken, top);
             return Ok(expenses);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving medical expenses");
-            return StatusCode(500, "An error occurred while retrieving medical expenses");
-        }
-    }
-
-    [HttpGet("{id}")]
-    public async Task<IActionResult> GetById(int id)
-    {
-        try
-        {
-            var expense = await _repository.GetByIdAsync(id);
-            if (expense == null)
-            {
-                return NotFound();
-            }
-            return Ok(expense);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error retrieving medical expense {Id}", id);
-            return StatusCode(500, "An error occurred while retrieving the medical expense");
+            _logger.LogError(ex, "Error retrieving medical expenses by person");
+            return StatusCode(500, "An error occurred while retrieving medical expenses by person");
         }
     }
 }

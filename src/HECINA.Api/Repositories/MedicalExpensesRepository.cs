@@ -14,66 +14,165 @@ public class MedicalExpensesRepository : IMedicalExpensesRepository
         _connectionFactory = connectionFactory;
     }
 
+    public async Task<IEnumerable<MedicalExpense>> GetExpensesByPersonAsync(
+        string identificationNumber, 
+        string? skipToken, 
+        int top)
+    {
+        const string sql = @"
+            SELECT
+                 [groups].[PersonsIdentificationNumber]
+                ,CONCAT(CAST([details].[EncounterDate] AS DATE), '-', TRIM([details].[ProviderCode])) AS ExpenseId
+                ,[groups].[EncounterDate]
+                ,[groups].[ProviderCode]
+                ,[details].[ProviderName]
+                ,[details].[CareType]
+                ,[details].[ID] AS DetailId
+                ,[details].[ServiceCode]
+                ,[details].[ServiceName]
+                ,[details].[Amount]
+                ,[details].[MedicalReferenceNumber]
+            FROM [dbo].[V_MYSZV_EXPENSES] AS [details]
+            INNER JOIN (
+                SELECT TOP (@Top)
+                    [EncounterDate]
+                    ,[ProviderCode]
+                    ,[PersonsIdentificationNumber]
+                FROM [dbo].[V_MYSZV_EXPENSES]
+                WHERE 
+                    [PersonsIdentificationNumber] = @IdentificationNumber
+                    AND (@SkipToken IS NULL 
+                        OR ( [EncounterDate] <= CAST(LEFT(@SkipToken, 10) AS DATETIME) 
+                            AND NOT ([EncounterDate] = CAST(LEFT(@SkipToken, 10) AS DATETIME) AND [ProviderCode] <= SUBSTRING(@SkipToken, 12, 128))) )
+                GROUP BY [PersonsIdentificationNumber], [EncounterDate], [ProviderCode]
+                ORDER BY [EncounterDate] DESC, [ProviderCode]
+            ) [groups] ON 
+                [groups].[PersonsIdentificationNumber] = [details].[PersonsIdentificationNumber] 
+                AND [groups].[EncounterDate] = [details].[EncounterDate] 
+                AND [groups].[ProviderCode] = [details].[ProviderCode] 
+            ORDER BY [groups].[EncounterDate] DESC, [groups].[ProviderCode]";
+
+        using var connection = _connectionFactory.CreateConnection();
+        var parameters = new
+        {
+            IdentificationNumber = identificationNumber,
+            SkipToken = skipToken,
+            Top = top
+        };
+
+        var results = await connection.QueryAsync<dynamic>(sql, parameters);
+
+        var grouped = results.GroupBy(r => (string)r.ExpenseId).Select(g =>
+        {
+            var first = g.First();
+            var expense = new MedicalExpense
+            {
+                Id = first.ExpenseId,
+                PersonsIdentificationNumber = first.PersonsIdentificationNumber,
+                ExpenseDate = first.EncounterDate,
+                ProviderCode = first.ProviderCode,
+                ProviderName = first.ProviderName,
+                CareType = first.CareType,
+                Details = g.Select(d => new MedicalExpenseDetail
+                {
+                    Id = d.DetailId,
+                    ServiceCode = d.ServiceCode,
+                    ServiceName = d.ServiceName,
+                    Amount = d.Amount,
+                    MedicalReferenceNumber = d.MedicalReferenceNumber
+                }).ToList()
+            };
+            return expense;
+        });
+        return grouped;
+    }
+
     public async Task<IEnumerable<MedicalExpense>> GetAllAsync()
     {
         const string sql = @"
             SELECT 
-                e.Id, e.PatientName, e.ExpenseDate, e.TotalAmount, e.Description,
-                d.Id, d.MedicalExpenseId, d.ItemDescription, d.Amount, d.Quantity
-            FROM MedicalExpenses e
-            LEFT JOIN MedicalExpenseDetails d ON e.Id = d.MedicalExpenseId
-            ORDER BY e.Id";
+                CONCAT(CAST([EncounterDate] AS DATE), '-', TRIM([ProviderCode])) AS ExpenseId,
+                [PersonsIdentificationNumber],
+                [EncounterDate],
+                [ProviderCode],
+                [ProviderName],
+                [CareType],
+                [ID] AS DetailId,
+                [ServiceCode],
+                [ServiceName],
+                [Amount],
+                [MedicalReferenceNumber]
+            FROM [dbo].[V_MYSZV_EXPENSES]
+            ORDER BY [EncounterDate] DESC, [ProviderCode]";
 
         using var connection = _connectionFactory.CreateConnection();
-        var expenseDictionary = await MapExpensesWithDetails(connection, sql, null);
-        return expenseDictionary.Values;
+        var results = await connection.QueryAsync<dynamic>(sql);
+
+        var grouped = results.GroupBy(r => (string)r.ExpenseId).Select(g =>
+        {
+            var first = g.First();
+            var expense = new MedicalExpense
+            {
+                Id = first.ExpenseId,
+                PersonsIdentificationNumber = first.PersonsIdentificationNumber,
+                ExpenseDate = first.EncounterDate,
+                ProviderCode = first.ProviderCode,
+                ProviderName = first.ProviderName,
+                CareType = first.CareType,
+                Details = g.Select(d => new MedicalExpenseDetail
+                {
+                    Id = d.DetailId,
+                    ServiceCode = d.ServiceCode,
+                    ServiceName = d.ServiceName,
+                    Amount = d.Amount,
+                    MedicalReferenceNumber = d.MedicalReferenceNumber
+                }).ToList()
+            };
+            return expense;
+        });
+        return grouped;
     }
 
-    public async Task<MedicalExpense?> GetByIdAsync(int id)
+    public async Task<MedicalExpense?> GetByIdAsync(string expenseId)
     {
         const string sql = @"
             SELECT 
-                e.Id, e.PatientName, e.ExpenseDate, e.TotalAmount, e.Description,
-                d.Id, d.MedicalExpenseId, d.ItemDescription, d.Amount, d.Quantity
-            FROM MedicalExpenses e
-            LEFT JOIN MedicalExpenseDetails d ON e.Id = d.MedicalExpenseId
-            WHERE e.Id = @Id
-            ORDER BY e.Id";
+                CONCAT(CAST([EncounterDate] AS DATE), '-', TRIM([ProviderCode])) AS ExpenseId,
+                [PersonsIdentificationNumber],
+                [EncounterDate],
+                [ProviderCode],
+                [ProviderName],
+                [CareType],
+                [ID] AS DetailId,
+                [ServiceCode],
+                [ServiceName],
+                [Amount],
+                [MedicalReferenceNumber]
+            FROM [dbo].[V_MYSZV_EXPENSES]
+            WHERE CONCAT(CAST([EncounterDate] AS DATE), '-', TRIM([ProviderCode])) = @ExpenseId";
 
         using var connection = _connectionFactory.CreateConnection();
-        var expenseDictionary = await MapExpensesWithDetails(connection, sql, new { Id = id });
-        return expenseDictionary.Values.FirstOrDefault();
-    }
-
-    private async Task<Dictionary<int, MedicalExpense>> MapExpensesWithDetails(
-        IDbConnection connection, 
-        string sql, 
-        object? parameters)
-    {
-        var expenseDictionary = new Dictionary<int, MedicalExpense>();
-        
-        await connection.QueryAsync<MedicalExpense, MedicalExpenseDetail, MedicalExpense>(
-            sql,
-            (expense, detail) =>
+        var results = await connection.QueryAsync<dynamic>(sql, new { ExpenseId = expenseId });
+        var group = results.GroupBy(r => (string)r.ExpenseId).FirstOrDefault();
+        if (group == null) return null;
+        var first = group.First();
+        var expense = new MedicalExpense
+        {
+            Id = first.ExpenseId,
+            PersonsIdentificationNumber = first.PersonsIdentificationNumber,
+            ExpenseDate = first.EncounterDate,
+            ProviderCode = first.ProviderCode,
+            ProviderName = first.ProviderName,
+            CareType = first.CareType,
+            Details = group.Select(d => new MedicalExpenseDetail
             {
-                if (!expenseDictionary.TryGetValue(expense.Id, out var expenseEntry))
-                {
-                    expenseEntry = expense;
-                    expenseEntry.Details = new List<MedicalExpenseDetail>();
-                    expenseDictionary.Add(expense.Id, expenseEntry);
-                }
-
-                if (detail != null)
-                {
-                    expenseEntry.Details.Add(detail);
-                }
-
-                return expenseEntry;
-            },
-            parameters,
-            splitOn: "Id"
-        );
-
-        return expenseDictionary;
+                Id = d.DetailId,
+                ServiceCode = d.ServiceCode,
+                ServiceName = d.ServiceName,
+                Amount = d.Amount,
+                MedicalReferenceNumber = d.MedicalReferenceNumber
+            }).ToList()
+        };
+        return expense;
     }
 }
