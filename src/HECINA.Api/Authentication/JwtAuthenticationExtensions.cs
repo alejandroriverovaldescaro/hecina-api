@@ -27,6 +27,8 @@ public static class JwtAuthenticationExtensions
         })
         .AddJwtBearer(options =>
         {
+            // Note: Set to true in production when HTTPS is available
+            // For on-prem IIS deployments, this may need configuration-based control
             options.RequireHttpsMetadata = false;
             options.SaveToken = true;
             options.TokenValidationParameters = new TokenValidationParameters

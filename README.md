@@ -102,6 +102,11 @@ Key configuration sections in `appsettings.json`:
 - **Authentication**: Authentication scheme and credentials
 - **Logging**: Log levels and providers
 
+**⚠️ Security Note**: The `appsettings.json` file contains placeholder/sample credentials for development purposes only. In production:
+- Store sensitive values in environment variables, Azure Key Vault, or secure configuration providers
+- Never commit real credentials to source control
+- Rotate secrets regularly
+
 See [API Modernization Guide](docs/api-modernization.md) for detailed configuration options.
 
 ## Deployment

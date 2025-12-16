@@ -1,3 +1,4 @@
+using System.Data;
 using Dapper;
 using HECINA.Api.Domain;
 using HECINA.Api.Infrastructure;
@@ -24,30 +25,7 @@ public class MedicalExpensesRepository : IMedicalExpensesRepository
             ORDER BY e.Id";
 
         using var connection = _connectionFactory.CreateConnection();
-        
-        var expenseDictionary = new Dictionary<int, MedicalExpense>();
-        
-        await connection.QueryAsync<MedicalExpense, MedicalExpenseDetail, MedicalExpense>(
-            sql,
-            (expense, detail) =>
-            {
-                if (!expenseDictionary.TryGetValue(expense.Id, out var expenseEntry))
-                {
-                    expenseEntry = expense;
-                    expenseEntry.Details = new List<MedicalExpenseDetail>();
-                    expenseDictionary.Add(expense.Id, expenseEntry);
-                }
-
-                if (detail != null)
-                {
-                    expenseEntry.Details.Add(detail);
-                }
-
-                return expenseEntry;
-            },
-            splitOn: "Id"
-        );
-
+        var expenseDictionary = await MapExpensesWithDetails(connection, sql, null);
         return expenseDictionary.Values;
     }
 
@@ -63,7 +41,15 @@ public class MedicalExpensesRepository : IMedicalExpensesRepository
             ORDER BY e.Id";
 
         using var connection = _connectionFactory.CreateConnection();
-        
+        var expenseDictionary = await MapExpensesWithDetails(connection, sql, new { Id = id });
+        return expenseDictionary.Values.FirstOrDefault();
+    }
+
+    private async Task<Dictionary<int, MedicalExpense>> MapExpensesWithDetails(
+        IDbConnection connection, 
+        string sql, 
+        object? parameters)
+    {
         var expenseDictionary = new Dictionary<int, MedicalExpense>();
         
         await connection.QueryAsync<MedicalExpense, MedicalExpenseDetail, MedicalExpense>(
@@ -84,10 +70,10 @@ public class MedicalExpensesRepository : IMedicalExpensesRepository
 
                 return expenseEntry;
             },
-            new { Id = id },
+            parameters,
             splitOn: "Id"
         );
 
-        return expenseDictionary.Values.FirstOrDefault();
+        return expenseDictionary;
     }
 }
