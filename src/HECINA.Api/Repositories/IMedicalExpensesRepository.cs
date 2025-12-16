@@ -6,4 +6,5 @@ public interface IMedicalExpensesRepository
 {
     Task<IEnumerable<MedicalExpense>> GetAllAsync();
     Task<MedicalExpense?> GetByIdAsync(int id);
+    Task<IEnumerable<PersonMedicalExpense>> GetExpensesForPersonAsync(string identificationNumber, string? skipToken, int top);
 }
