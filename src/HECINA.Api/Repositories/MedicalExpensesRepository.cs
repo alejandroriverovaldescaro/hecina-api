@@ -49,7 +49,7 @@ public class MedicalExpensesRepository : IMedicalExpensesRepository
     {
         const string sql = @"
 SELECT [groups].[PersonsIdentificationNumber]
-    ,CONCAT(CAST([details].[EncounterDate] AS DATE), '-', TRIM([details].[ProviderCode]))
+    ,CONCAT(CAST([details].[EncounterDate] AS DATE), '-', TRIM([details].[ProviderCode])) AS NextPageToken
     ,[groups].[EncounterDate]
     ,[groups].[ProviderCode]
     ,[details].[ProviderName]
