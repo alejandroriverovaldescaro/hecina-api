@@ -98,6 +98,7 @@ if (app.Environment.IsDevelopment())
 app.UseCorrelationId();
 
 app.UseAuthentication();
+app.UseAuthorization(); // <-- Add this line
 
 app.MapControllers();
 
