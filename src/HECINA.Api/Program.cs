@@ -9,17 +9,15 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container
 builder.Services.AddControllers();
 
-// Add authentication
+// Add authentication: register BOTH Basic and Bearer schemes
 var authScheme = builder.Configuration["Authentication:Scheme"] ?? "Basic";
-if (authScheme.Equals("JWT", StringComparison.OrdinalIgnoreCase))
+builder.Services.AddAuthentication(options =>
 {
-    builder.Services.AddJwtAuthentication(builder.Configuration);
-}
-else
-{
-    builder.Services.AddAuthentication("Basic")
-        .AddScheme<AuthenticationSchemeOptions, BasicAuthenticationHandler>("Basic", null);
-}
+    options.DefaultScheme = authScheme.Equals("JWT", StringComparison.OrdinalIgnoreCase) ? "Bearer" : "Basic";
+})
+.AddScheme<AuthenticationSchemeOptions, BasicAuthenticationHandler>("Basic", null);
+
+builder.Services.AddJwtAuthentication(builder.Configuration); // Extension method must call AddJwtBearer("Bearer", ...)
 
 builder.Services.AddAuthorization();
 
@@ -98,8 +96,8 @@ if (app.Environment.IsDevelopment())
 app.UseCorrelationId();
 
 app.UseAuthentication();
-app.UseAuthorization(); // <-- Add this line
+app.UseAuthorization(); 
 
 app.MapControllers();
 
-app.Run();
+await app.RunAsync();

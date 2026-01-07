@@ -6,7 +6,8 @@ namespace HECINA.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
+ 
+[Authorize(AuthenticationSchemes = "Basic,Bearer")]
 public class MedicalExpensesController : ControllerBase
 {
     private readonly IMedicalExpensesRepository _repository;
@@ -20,8 +21,8 @@ public class MedicalExpensesController : ControllerBase
         _logger = logger;
     }
 
-    [HttpGet("by-person")]
-    public async Task<IActionResult> GetByPerson([FromQuery] string identificationNumber, [FromQuery] string? skipToken, [FromQuery] int top = 10)
+    [HttpGet("{identificationNumber}")]
+    public async Task<IActionResult> GetByIdentificationNumber(string identificationNumber, [FromQuery] string? skipToken, [FromQuery] int top = 10)
     {
         try
         {
@@ -30,8 +31,8 @@ public class MedicalExpensesController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving medical expenses by person");
-            return StatusCode(500, "An error occurred while retrieving medical expenses by person");
+            _logger.LogError(ex, "Error retrieving medical expenses for identification number {IdentificationNumber}", identificationNumber);
+            return StatusCode(500, "An error occurred while retrieving medical expenses");
         }
     }
 }
