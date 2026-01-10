@@ -54,7 +54,7 @@ public class IdentificationController : ControllerBase
     {
         try
         {
-            _logger.LogInformation("GetByIdentificationNumber called for: {IdentificationNumber}", identificationNumber);
+            _logger.LogInformation("GetByIdentificationNumber API called");
 
             // Step 1: Extract JWT token from Authorization header
             var authHeader = Request.Headers["Authorization"].ToString();
@@ -98,7 +98,7 @@ public class IdentificationController : ControllerBase
                 return StatusCode(500, new { message = "Contact information not available" });
             }
 
-            _logger.LogInformation("Contact retrieved from Dataverse. SZVIdNumber: {SZVIdNumber}", userSession.Contact.SZVIdNumber);
+            _logger.LogInformation("Contact retrieved from Dataverse for user: {UserNameIdentifier}", userNameIdentifier);
 
             // Step 5: Compare Contact.SZVIdNumber with requested identificationNumber
             // Use case-sensitive comparison (Ordinal) for identification numbers to ensure exact match
@@ -117,19 +117,19 @@ public class IdentificationController : ControllerBase
                 });
             }
 
-            _logger.LogInformation("Authorization successful. Proceeding with data retrieval for: {IdentificationNumber}", identificationNumber);
+            _logger.LogInformation("Authorization successful for user: {UserNameIdentifier}. Proceeding with data retrieval.", userNameIdentifier);
 
             // Step 6: Authorization passed - proceed with retrieving medical expenses
             var expenses = await _repository.GetExpensesByPersonAsync(identificationNumber, skipToken, top);
             
-            _logger.LogInformation("Successfully retrieved {Count} medical expenses for: {IdentificationNumber}", 
-                expenses?.Count() ?? 0, identificationNumber);
+            _logger.LogInformation("Successfully retrieved {Count} medical expenses for user: {UserNameIdentifier}", 
+                expenses?.Count() ?? 0, userNameIdentifier);
             
             return Ok(expenses);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unexpected error in GetByIdentificationNumber for: {IdentificationNumber}", identificationNumber);
+            _logger.LogError(ex, "Unexpected error in GetByIdentificationNumber");
             return StatusCode(500, new { message = "An error occurred while processing your request" });
         }
     }

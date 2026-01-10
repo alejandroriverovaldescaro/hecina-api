@@ -60,15 +60,23 @@ public class DataVerseRequest : IDataVerseRequest
 
             // Query Dataverse for the contact associated with this user
             // Note: Adjust the OData query based on your actual Dataverse schema
-            // URL encode the userNameIdentifier and validate it to prevent injection attacks
+            // Validate and encode the userNameIdentifier to prevent injection attacks
             
             // Additional validation: ensure userNameIdentifier doesn't contain suspicious characters
-            if (userNameIdentifier.Contains('\'') || userNameIdentifier.Contains('"') || userNameIdentifier.Contains(';'))
+            // that could break OData filter syntax even after URL encoding
+            if (string.IsNullOrWhiteSpace(userNameIdentifier) || 
+                userNameIdentifier.Contains('\'') || 
+                userNameIdentifier.Contains('"') || 
+                userNameIdentifier.Contains(';') ||
+                userNameIdentifier.Contains('$') ||
+                userNameIdentifier.Contains('&') ||
+                userNameIdentifier.Contains('='))
             {
-                _logger.LogWarning("Invalid characters detected in userNameIdentifier");
+                _logger.LogWarning("Invalid or suspicious characters detected in userNameIdentifier");
                 return null;
             }
             
+            // Double-encode to ensure special characters don't break the OData filter
             var encodedUserIdentifier = Uri.EscapeDataString(userNameIdentifier);
             var query = $"{_config.ApiEndpoint}/api/data/v9.2/contacts?$filter=adx_identity_username eq '{encodedUserIdentifier}'&$select=contactid,firstname,lastname,emailaddress1,new_szvidnumber";
             
@@ -112,7 +120,7 @@ public class DataVerseRequest : IDataVerseRequest
                 IsActive = true
             };
 
-            _logger.LogInformation("Successfully retrieved user session from Dataverse. SZVIdNumber: {SZVIdNumber}", userSession.Contact.SZVIdNumber);
+            _logger.LogInformation("Successfully retrieved user session from Dataverse for user: {UserNameIdentifier}", userNameIdentifier);
             return userSession;
         }
         catch (Exception ex)
