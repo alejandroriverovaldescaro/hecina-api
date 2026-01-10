@@ -34,7 +34,7 @@ public class DataVerseRequest : IDataVerseRequest
         _config = config.Value;
         _logger = logger;
         _httpClient = httpClientFactory.CreateClient("DataVerseClient");
-        _httpClient.Timeout = TimeSpan.FromSeconds(_config.TimeoutSeconds);
+        // Note: Timeout is configured in ServiceCollectionExtensions via named client configuration
     }
 
     /// <summary>
@@ -60,7 +60,15 @@ public class DataVerseRequest : IDataVerseRequest
 
             // Query Dataverse for the contact associated with this user
             // Note: Adjust the OData query based on your actual Dataverse schema
-            // URL encode the userNameIdentifier to prevent injection attacks
+            // URL encode the userNameIdentifier and validate it to prevent injection attacks
+            
+            // Additional validation: ensure userNameIdentifier doesn't contain suspicious characters
+            if (userNameIdentifier.Contains('\'') || userNameIdentifier.Contains('"') || userNameIdentifier.Contains(';'))
+            {
+                _logger.LogWarning("Invalid characters detected in userNameIdentifier");
+                return null;
+            }
+            
             var encodedUserIdentifier = Uri.EscapeDataString(userNameIdentifier);
             var query = $"{_config.ApiEndpoint}/api/data/v9.2/contacts?$filter=adx_identity_username eq '{encodedUserIdentifier}'&$select=contactid,firstname,lastname,emailaddress1,new_szvidnumber";
             
@@ -121,6 +129,14 @@ public class DataVerseRequest : IDataVerseRequest
     {
         try
         {
+            // Validate configuration values before making request
+            if (string.IsNullOrEmpty(_config.ClientId) || string.IsNullOrEmpty(_config.ClientSecret) || 
+                string.IsNullOrEmpty(_config.TenantId) || string.IsNullOrEmpty(_config.Resource))
+            {
+                _logger.LogError("Dataverse configuration is incomplete. ClientId, ClientSecret, TenantId, and Resource are all required.");
+                return null;
+            }
+            
             var tokenEndpoint = $"https://login.microsoftonline.com/{_config.TenantId}/oauth2/v2.0/token";
             
             var requestBody = new FormUrlEncodedContent(new Dictionary<string, string>

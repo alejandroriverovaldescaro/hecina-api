@@ -21,10 +21,12 @@ public static class ServiceCollectionExtensions
         // Register infrastructure services
         services.AddSingleton<IDbConnectionFactory, DbConnectionFactory>();
         
-        // Register HTTP client factory for Dataverse
-        services.AddHttpClient("DataVerseClient", client =>
+        // Register HTTP client factory for Dataverse with proper timeout configuration
+        services.AddHttpClient("DataVerseClient", (serviceProvider, client) =>
         {
-            client.Timeout = TimeSpan.FromSeconds(30); // Default timeout, can be overridden by config
+            var dataverseConfig = configuration.GetSection(DataVerseConfig.SectionName).Get<DataVerseConfig>();
+            var timeoutSeconds = dataverseConfig?.TimeoutSeconds ?? 30;
+            client.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
         });
         
         // Register repositories
