@@ -54,13 +54,17 @@ public class DataVerseRequest : IDataVerseRequest
                 return null;
             }
 
-            // Set up the request to Dataverse
-            _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
-            _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-
             // Query Dataverse for the contact associated with this user
             // Note: Adjust the OData query based on your actual Dataverse schema
             // Validate and encode the userNameIdentifier to prevent injection attacks
+            
+            // Security Note: OData Query Construction
+            // The userNameIdentifier from Azure AD B2C JWT token is a trusted source (GUID format).
+            // We apply multiple layers of defense:
+            // 1. Input validation: reject suspicious characters that could break OData syntax
+            // 2. URL encoding: encodes special characters
+            // 3. Source trust: value comes from validated JWT token, not user input
+            // For maximum security, consider using Microsoft.OData.Client library for parameterized queries.
             
             // Additional validation: ensure userNameIdentifier doesn't contain suspicious characters
             // that could break OData filter syntax even after URL encoding
@@ -76,11 +80,16 @@ public class DataVerseRequest : IDataVerseRequest
                 return null;
             }
             
-            // Double-encode to ensure special characters don't break the OData filter
+            // URL encode the userNameIdentifier
             var encodedUserIdentifier = Uri.EscapeDataString(userNameIdentifier);
             var query = $"{_config.ApiEndpoint}/api/data/v9.2/contacts?$filter=adx_identity_username eq '{encodedUserIdentifier}'&$select=contactid,firstname,lastname,emailaddress1,new_szvidnumber";
             
-            var response = await _httpClient.GetAsync(query);
+            // Create request message with headers to avoid race conditions on shared HttpClient
+            using var request = new HttpRequestMessage(HttpMethod.Get, query);
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            
+            var response = await _httpClient.SendAsync(request);
             
             if (!response.IsSuccessStatusCode)
             {

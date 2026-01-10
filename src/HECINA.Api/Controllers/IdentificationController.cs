@@ -10,9 +10,11 @@ namespace HECINA.Api.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(AuthenticationSchemes = "Bearer")] // Only JWT Bearer tokens are accepted
+// Note: No [Authorize] attribute here as we perform custom JWT validation in the action method
 public class IdentificationController : ControllerBase
 {
+    private const string BearerScheme = "Bearer ";
+    
     private readonly IMedicalExpensesRepository _repository;
     private readonly IJwtHandlerService _jwtHandlerService;
     private readonly IDataVerseRequest _dataVerseRequest;
@@ -58,13 +60,13 @@ public class IdentificationController : ControllerBase
 
             // Step 1: Extract JWT token from Authorization header
             var authHeader = Request.Headers["Authorization"].ToString();
-            if (string.IsNullOrEmpty(authHeader) || !authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+            if (string.IsNullOrEmpty(authHeader) || !authHeader.StartsWith(BearerScheme, StringComparison.OrdinalIgnoreCase))
             {
                 _logger.LogWarning("Missing or invalid Authorization header");
                 return Unauthorized(new { message = "Missing or invalid Authorization header" });
             }
 
-            var token = authHeader.Substring("Bearer ".Length).Trim();
+            var token = authHeader.Substring(BearerScheme.Length).Trim();
 
             // Step 2: Validate JWT token using Azure AD B2C settings
             var principal = await _jwtHandlerService.ValidateTokenAsync(token);

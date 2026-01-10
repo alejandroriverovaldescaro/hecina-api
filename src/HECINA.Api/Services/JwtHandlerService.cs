@@ -82,7 +82,8 @@ public class JwtHandlerService : IJwtHandlerService
             }
 
             // Additional validation: Check that the token uses the expected algorithm
-            if (!jwtToken.Header.Alg.Equals(SecurityAlgorithms.RsaSha256, StringComparison.InvariantCultureIgnoreCase))
+            // Use case-sensitive comparison (Ordinal) for security-critical algorithm validation
+            if (!jwtToken.Header.Alg.Equals(SecurityAlgorithms.RsaSha256, StringComparison.Ordinal))
             {
                 _logger.LogWarning("Token does not use RS256 algorithm");
                 return null;
