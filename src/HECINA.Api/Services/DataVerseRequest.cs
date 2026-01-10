@@ -3,6 +3,7 @@ using HECINA.Api.Models.DTOs;
 using Microsoft.Extensions.Options;
 using System.Net.Http.Headers;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace HECINA.Api.Services;
 
@@ -59,7 +60,9 @@ public class DataVerseRequest : IDataVerseRequest
 
             // Query Dataverse for the contact associated with this user
             // Note: Adjust the OData query based on your actual Dataverse schema
-            var query = $"{_config.ApiEndpoint}/api/data/v9.2/contacts?$filter=adx_identity_username eq '{userNameIdentifier}'&$select=contactid,firstname,lastname,emailaddress1,new_szvidnumber";
+            // URL encode the userNameIdentifier to prevent injection attacks
+            var encodedUserIdentifier = Uri.EscapeDataString(userNameIdentifier);
+            var query = $"{_config.ApiEndpoint}/api/data/v9.2/contacts?$filter=adx_identity_username eq '{encodedUserIdentifier}'&$select=contactid,firstname,lastname,emailaddress1,new_szvidnumber";
             
             var response = await _httpClient.GetAsync(query);
             
@@ -159,17 +162,31 @@ public class DataVerseRequest : IDataVerseRequest
 
     private class DataverseContact
     {
+        [JsonPropertyName("contactid")]
         public string? ContactId { get; set; }
+        
+        [JsonPropertyName("firstname")]
         public string? FirstName { get; set; }
+        
+        [JsonPropertyName("lastname")]
         public string? LastName { get; set; }
+        
+        [JsonPropertyName("emailaddress1")]
         public string? EmailAddress1 { get; set; }
+        
+        [JsonPropertyName("new_szvidnumber")]
         public string? SZVIdNumber { get; set; }
     }
 
     private class TokenResponse
     {
+        [JsonPropertyName("access_token")]
         public string? AccessToken { get; set; }
+        
+        [JsonPropertyName("token_type")]
         public string? TokenType { get; set; }
+        
+        [JsonPropertyName("expires_in")]
         public int ExpiresIn { get; set; }
     }
 }

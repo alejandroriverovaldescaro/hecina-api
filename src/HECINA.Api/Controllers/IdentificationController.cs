@@ -101,7 +101,8 @@ public class IdentificationController : ControllerBase
             _logger.LogInformation("Contact retrieved from Dataverse. SZVIdNumber: {SZVIdNumber}", userSession.Contact.SZVIdNumber);
 
             // Step 5: Compare Contact.SZVIdNumber with requested identificationNumber
-            if (!string.Equals(userSession.Contact.SZVIdNumber, identificationNumber, StringComparison.OrdinalIgnoreCase))
+            // Use case-sensitive comparison for identification numbers to ensure exact match
+            if (!string.Equals(userSession.Contact.SZVIdNumber, identificationNumber, StringComparison.Ordinal))
             {
                 _logger.LogWarning(
                     "Authorization failed: User's SZVIdNumber ({UserSZVId}) does not match requested identificationNumber ({RequestedId})",

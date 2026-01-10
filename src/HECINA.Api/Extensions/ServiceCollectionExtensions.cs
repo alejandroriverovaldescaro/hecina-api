@@ -22,7 +22,10 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IDbConnectionFactory, DbConnectionFactory>();
         
         // Register HTTP client factory for Dataverse
-        services.AddHttpClient();
+        services.AddHttpClient("DataVerseClient", client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(30); // Default timeout, can be overridden by config
+        });
         
         // Register repositories
         services.AddScoped<IMedicalExpensesRepository, MedicalExpensesRepository>();

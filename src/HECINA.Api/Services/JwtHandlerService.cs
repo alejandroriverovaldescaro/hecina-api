@@ -61,7 +61,8 @@ public class JwtHandlerService : IJwtHandlerService
             var validationParameters = new TokenValidationParameters
             {
                 ValidateIssuer = true,
-                ValidIssuer = $"{_config.Instance}{_config.TenantId}/v2.0/",
+                // Use the issuer from OpenID config for flexibility with different B2C policy configurations
+                ValidIssuer = openIdConfig.Issuer,
                 ValidateAudience = true,
                 ValidAudience = _config.Audience,
                 ValidateIssuerSigningKey = true,
