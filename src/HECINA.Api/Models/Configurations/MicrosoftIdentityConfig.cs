@@ -87,7 +87,7 @@ public class MicrosoftIdentityConfig
     /// </summary>
     public List<string> GetValidIssuers()
     {
-        if (ValidIssuers.Any())
+        if (ValidIssuers != null && ValidIssuers.Any())
         {
             return ValidIssuers;
         }

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
 using System.Text;
 
 namespace HECINA.Api.Authentication;
@@ -71,7 +72,7 @@ public static class JwtAuthenticationExtensions
                                 ValidateAudience = false,
                                 ValidateLifetime = false,
                                 ValidateIssuerSigningKey = false,
-                                SignatureValidator = (token, parameters) => new System.IdentityModel.Tokens.Jwt.JwtSecurityToken(token)
+                                SignatureValidator = (token, parameters) => new JwtSecurityToken(token)
                             };
                         }
                     }
