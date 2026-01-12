@@ -98,10 +98,38 @@ public class JwtHandlerService : IJwtHandlerService
 
     /// <summary>
     /// Gets the token validation parameters for JWT validation.
+    /// Note: This returns basic parameters without signing keys from metadata.
+    /// For full validation including metadata-based signing keys, use ValidateTokenAsync.
     /// </summary>
     public TokenValidationParameters GetTokenValidationParameters()
     {
-        return GetTokenValidationParametersAsync().GetAwaiter().GetResult();
+        var validationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = _config.ValidateIssuer,
+            ValidateAudience = _config.ValidateAudience,
+            ValidateLifetime = _config.ValidateLifetime,
+            ValidateIssuerSigningKey = _config.ValidateIssuerSigningKey,
+            ClockSkew = TimeSpan.FromMinutes(5)
+        };
+
+        // Set audience
+        if (_config.ValidateAudience)
+        {
+            var audience = !string.IsNullOrEmpty(_config.Audience) ? _config.Audience : _config.ClientId;
+            validationParameters.ValidAudience = audience;
+        }
+
+        // Set valid issuers (multi-issuer support)
+        if (_config.ValidateIssuer)
+        {
+            var validIssuers = _config.GetValidIssuers();
+            if (validIssuers.Any())
+            {
+                validationParameters.ValidIssuers = validIssuers;
+            }
+        }
+
+        return validationParameters;
     }
 
     /// <summary>
@@ -144,7 +172,7 @@ public class JwtHandlerService : IJwtHandlerService
                 validationParameters.IssuerSigningKeys = openIdConfig.SigningKeys;
 
                 // Also validate against issuer from metadata if not explicitly set
-                if (_config.ValidateIssuer && !validationParameters.ValidIssuers.Any())
+                if (_config.ValidateIssuer && !(validationParameters.ValidIssuers?.Any() ?? false))
                 {
                     validationParameters.ValidIssuer = openIdConfig.Issuer;
                 }

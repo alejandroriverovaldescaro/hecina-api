@@ -85,6 +85,12 @@ public static class JwtAuthenticationExtensions
             var audience = jwtSection["Audience"];
             var secretKey = jwtSection["SecretKey"];
 
+            if (string.IsNullOrEmpty(secretKey))
+            {
+                throw new InvalidOperationException(
+                    "JWT SecretKey is required in Authentication:Jwt configuration section.");
+            }
+
             services.AddAuthentication()
                 .AddJwtBearer("Bearer", options =>
                 {
@@ -95,7 +101,7 @@ public static class JwtAuthenticationExtensions
                         ValidateAudience = true,
                         ValidAudience = audience,
                         ValidateIssuerSigningKey = true,
-                        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey ?? string.Empty)),
+                        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
                         ValidateLifetime = true
                     };
                 });
