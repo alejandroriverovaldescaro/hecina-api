@@ -11,9 +11,6 @@ namespace HECINA.Api.Authentication;
 /// <summary>
 /// Service for handling JWT token validation for Azure AD B2C.
 /// Supports multi-issuer validation, stub mode, and robust error handling.
-/// <summary>
-/// Service for handling JWT token validation for Azure AD B2C.
-/// Supports multi-issuer validation, stub mode, and robust error handling.
 /// </summary>
 public interface IJwtHandlerService
 {

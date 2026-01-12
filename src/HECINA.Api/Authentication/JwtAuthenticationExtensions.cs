@@ -2,6 +2,7 @@ using HECINA.Api.Models.Configurations;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Text;
@@ -65,6 +66,10 @@ public static class JwtAuthenticationExtensions
                         }
                         else
                         {
+                            // SECURITY WARNING: Stub mode bypasses all token validation
+                            // This should ONLY be used in development environments
+                            Console.WriteLine("SECURITY WARNING: Azure B2C Stub Mode is ENABLED. Token validation is bypassed. This should ONLY be used in development.");
+
                             // Stub mode: minimal validation
                             options.TokenValidationParameters = new TokenValidationParameters
                             {
