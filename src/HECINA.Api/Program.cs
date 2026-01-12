@@ -1,6 +1,7 @@
 using HECINA.Api.Authentication;
 using HECINA.Api.Extensions;
 using HECINA.Api.Middleware;
+using HECINA.Api.Models.Configurations;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.OpenApi.Models;
 
@@ -8,6 +9,13 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container
 builder.Services.AddControllers();
+
+// Configure Azure AD B2C options
+builder.Services.Configure<MicrosoftIdentityConfig>(
+    builder.Configuration.GetSection(MicrosoftIdentityConfig.SectionName));
+
+// Register JwtHandlerService
+builder.Services.AddSingleton<IJwtHandlerService, JwtHandlerService>();
 
 // Add authentication: register BOTH Basic and Bearer schemes
 var authScheme = builder.Configuration["Authentication:Scheme"] ?? "Basic";
