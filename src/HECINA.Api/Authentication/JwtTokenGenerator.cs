@@ -11,7 +11,7 @@ public static class JwtTokenGenerator
         var secretKey = "YourSuperSecretKeyForJWTTokenGeneration12345";
         var issuer = "HECINA.Api";
         var audience = "HECINA.Api.Client";
-        var expirationMinutes = 60;
+        var expirationMinutes = 3600;
 
         var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
         var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);

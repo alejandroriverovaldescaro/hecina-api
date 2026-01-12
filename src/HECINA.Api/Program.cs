@@ -100,4 +100,6 @@ app.UseAuthorization();
 
 app.MapControllers();
 
+app.MapGet("/", () => Results.Ok("HECINA API is running"));
+
 await app.RunAsync();
