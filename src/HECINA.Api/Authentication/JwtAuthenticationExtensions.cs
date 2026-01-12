@@ -25,7 +25,7 @@ public static class JwtAuthenticationExtensions
                 {
                     var azureB2CConfig = azureB2CSection.Get<MicrosoftIdentityConfig>();
                     
-                    if (azureB2CConfig != null)
+                    if (azureB2CConfig != null && (azureB2CConfig.EnableStubMode || azureB2CConfig.IsValid()))
                     {
                         // Use JwtHandlerService to get validation parameters
                         // This will be resolved from DI at runtime
@@ -75,6 +75,11 @@ public static class JwtAuthenticationExtensions
                                 SignatureValidator = (token, parameters) => new JwtSecurityToken(token)
                             };
                         }
+                    }
+                    else
+                    {
+                        throw new InvalidOperationException(
+                            "Azure AD B2C configuration is invalid. Please check the AzureAdB2C section in appsettings.json.");
                     }
                 });
         }

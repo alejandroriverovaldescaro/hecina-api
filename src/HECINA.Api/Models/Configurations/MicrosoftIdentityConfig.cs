@@ -87,7 +87,7 @@ public class MicrosoftIdentityConfig
     /// </summary>
     public List<string> GetValidIssuers()
     {
-        if (ValidIssuers != null && ValidIssuers.Any())
+        if (ValidIssuers.Any())
         {
             return ValidIssuers;
         }
@@ -97,7 +97,12 @@ public class MicrosoftIdentityConfig
         {
             // Add both common issuer patterns for Azure B2C
             issuers.Add($"{Instance.TrimEnd('/')}/{TenantId}/v2.0/");
-            issuers.Add($"{Instance.TrimEnd('/')}/tfp/{TenantId}/{SignUpSignInPolicyId}/v2.0/");
+            
+            // Only add policy-specific issuer if policy is configured
+            if (!string.IsNullOrEmpty(SignUpSignInPolicyId))
+            {
+                issuers.Add($"{Instance.TrimEnd('/')}/tfp/{TenantId}/{SignUpSignInPolicyId}/v2.0/");
+            }
         }
         return issuers;
     }

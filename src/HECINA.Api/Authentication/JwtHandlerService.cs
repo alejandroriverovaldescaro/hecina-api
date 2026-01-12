@@ -11,10 +11,13 @@ namespace HECINA.Api.Authentication;
 /// <summary>
 /// Service for handling JWT token validation for Azure AD B2C.
 /// Supports multi-issuer validation, stub mode, and robust error handling.
+/// <summary>
+/// Service for handling JWT token validation for Azure AD B2C.
+/// Supports multi-issuer validation, stub mode, and robust error handling.
 /// </summary>
 public interface IJwtHandlerService
 {
-    Task<ClaimsPrincipal?> ValidateTokenAsync(string token);
+    Task<ClaimsPrincipal?> ValidateTokenAsync(string token, CancellationToken cancellationToken = default);
     TokenValidationParameters GetTokenValidationParameters();
 }
 
@@ -46,7 +49,7 @@ public class JwtHandlerService : IJwtHandlerService
     /// <summary>
     /// Validates a JWT token and returns the ClaimsPrincipal if valid.
     /// </summary>
-    public async Task<ClaimsPrincipal?> ValidateTokenAsync(string token)
+    public async Task<ClaimsPrincipal?> ValidateTokenAsync(string token, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(token))
         {
@@ -64,7 +67,7 @@ public class JwtHandlerService : IJwtHandlerService
             }
 
             // Get validation parameters
-            var validationParameters = await GetTokenValidationParametersAsync();
+            var validationParameters = await GetTokenValidationParametersAsync(cancellationToken);
 
             // Validate the token
             var principal = _tokenHandler.ValidateToken(token, validationParameters, out var validatedToken);
@@ -143,7 +146,7 @@ public class JwtHandlerService : IJwtHandlerService
     /// <summary>
     /// Gets the token validation parameters asynchronously with signing keys from metadata.
     /// </summary>
-    private async Task<TokenValidationParameters> GetTokenValidationParametersAsync()
+    private async Task<TokenValidationParameters> GetTokenValidationParametersAsync(CancellationToken cancellationToken)
     {
         var validationParameters = CreateBaseTokenValidationParameters();
 
@@ -152,7 +155,7 @@ public class JwtHandlerService : IJwtHandlerService
         {
             try
             {
-                var openIdConfig = await _configurationManager.GetConfigurationAsync(CancellationToken.None);
+                var openIdConfig = await _configurationManager.GetConfigurationAsync(cancellationToken);
                 validationParameters.IssuerSigningKeys = openIdConfig.SigningKeys;
 
                 // Also validate against issuer from metadata if not explicitly set
@@ -196,16 +199,24 @@ public class JwtHandlerService : IJwtHandlerService
             var identity = new ClaimsIdentity(claims, "Stub");
             return new ClaimsPrincipal(identity);
         }
-        catch
+        catch (ArgumentException ex)
         {
-            // If we can't read the token, create a minimal stub principal
-            var claims = new List<Claim>
-            {
-                new Claim(ClaimTypes.Name, "StubUser"),
-                new Claim(ClaimTypes.NameIdentifier, "stub-user-id")
-            };
-            var identity = new ClaimsIdentity(claims, "Stub");
-            return new ClaimsPrincipal(identity);
+            // Token format is invalid
+            _logger.LogWarning(ex, "Failed to parse token in stub mode, using default stub principal");
         }
+        catch (FormatException ex)
+        {
+            // Token is malformed
+            _logger.LogWarning(ex, "Malformed token in stub mode, using default stub principal");
+        }
+
+        // If we can't read the token, create a minimal stub principal
+        var defaultClaims = new List<Claim>
+        {
+            new Claim(ClaimTypes.Name, "StubUser"),
+            new Claim(ClaimTypes.NameIdentifier, "stub-user-id")
+        };
+        var defaultIdentity = new ClaimsIdentity(defaultClaims, "Stub");
+        return new ClaimsPrincipal(defaultIdentity);
     }
 }
