@@ -71,24 +71,28 @@ public class JwtHandlerService : IJwtHandlerService
                 ClockSkew = TimeSpan.FromMinutes(5) // Allow 5 minutes clock skew
             };
 
-            var tokenHandler = new JwtSecurityTokenHandler();
-            var principal = tokenHandler.ValidateToken(token, validationParameters, out SecurityToken validatedToken);
-
-            // Verify that the token is a JWT token
-            if (validatedToken is not JwtSecurityToken jwtToken)
+            var tokenHandler = new Microsoft.IdentityModel.JsonWebTokens.JsonWebTokenHandler();
+            var result = tokenHandler.ValidateToken(token, validationParameters);
+            if (!result.IsValid)
             {
-                _logger.LogWarning("Token is not a valid JWT token");
+                _logger.LogWarning("Token validation failed: {Error}", result.Exception?.Message ?? "Unknown error");
                 return null;
             }
 
             // Additional validation: Check that the token uses the expected algorithm
-            // Use case-sensitive comparison (Ordinal) for security-critical algorithm validation
-            if (!jwtToken.Header.Alg.Equals(SecurityAlgorithms.RsaSha256, StringComparison.Ordinal))
+            var jwtToken = result.SecurityToken as Microsoft.IdentityModel.JsonWebTokens.JsonWebToken;
+            if (jwtToken == null)
+            {
+                _logger.LogWarning("Token is not a valid JWT token");
+                return null;
+            }
+            if (!jwtToken.Alg.Equals(SecurityAlgorithms.RsaSha256, StringComparison.Ordinal))
             {
                 _logger.LogWarning("Token does not use RS256 algorithm");
                 return null;
             }
 
+            var principal = new ClaimsPrincipal(result.ClaimsIdentity);
             _logger.LogInformation("JWT token validated successfully for user: {UserId}", GetUserNameIdentifier(principal));
             return principal;
         }
