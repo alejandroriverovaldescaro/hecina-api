@@ -15,6 +15,9 @@ public static class JwtAuthenticationExtensions
         var audience = jwtSection["Audience"];
         var secretKey = jwtSection["SecretKey"];
 
+        if (string.IsNullOrEmpty(secretKey))
+            throw new ArgumentNullException(nameof(secretKey), "JWT SecretKey configuration value is missing.");
+
         services.AddAuthentication()
             .AddJwtBearer("Bearer", options =>
             {

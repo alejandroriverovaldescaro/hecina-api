@@ -206,30 +206,6 @@ public class DataVerseRequest : IDataVerseRequest
         }
     }
 
-    // Internal classes for JSON deserialization
-    private class DataverseContactResponse
-    {
-        public List<DataverseContact>? Value { get; set; }
-    }
-
-    private class DataverseContact
-    {
-        [JsonPropertyName("contactid")]
-        public string? ContactId { get; set; }
-        
-        [JsonPropertyName("firstname")]
-        public string? FirstName { get; set; }
-        
-        [JsonPropertyName("lastname")]
-        public string? LastName { get; set; }
-        
-        [JsonPropertyName("emailaddress1")]
-        public string? EmailAddress1 { get; set; }
-        
-        [JsonPropertyName("uszv_szvidnumber")]
-        public string? SZVIdNumber { get; set; }
-    }
-
     private class TokenResponse
     {
         [JsonPropertyName("access_token")]

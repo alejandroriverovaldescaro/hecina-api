@@ -52,14 +52,14 @@ public class IdentificationController : ControllerBase
     public async Task<IActionResult> GetByIdentificationNumber(
         string identificationNumber, 
         [FromQuery] string? skipToken, 
-        [FromQuery] int top = 10)
+        [FromQuery] int top = 10,
+        [FromHeader(Name = "Authorization")] string? authHeader = null)
     {
         try
         {
             _logger.LogInformation("GetByIdentificationNumber API called");
 
             // Step 1: Extract JWT token from Authorization header
-            var authHeader = Request.Headers["Authorization"].ToString();
             if (string.IsNullOrEmpty(authHeader) || !authHeader.StartsWith(BearerScheme, StringComparison.OrdinalIgnoreCase))
             {
                 _logger.LogWarning("Missing or invalid Authorization header");
