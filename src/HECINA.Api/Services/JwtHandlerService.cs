@@ -72,7 +72,7 @@ public class JwtHandlerService : IJwtHandlerService
             };
 
             var tokenHandler = new Microsoft.IdentityModel.JsonWebTokens.JsonWebTokenHandler();
-            var result = tokenHandler.ValidateToken(token, validationParameters);
+            var result = await tokenHandler.ValidateTokenAsync(token, validationParameters);
             if (!result.IsValid)
             {
                 _logger.LogWarning("Token validation failed: {Error}", result.Exception?.Message ?? "Unknown error");

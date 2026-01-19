@@ -79,50 +79,69 @@ public class DataVerseRequest : IDataVerseRequest
                 _logger.LogWarning("Invalid or suspicious characters detected in userNameIdentifier");
                 return null;
             }
-            
-            // URL encode the userNameIdentifier
-            var encodedUserIdentifier = Uri.EscapeDataString(userNameIdentifier);
-            var query = $"{_config.ApiEndpoint}/api/data/v9.2/contacts?$filter=adx_identity_username eq '{encodedUserIdentifier}'&$select=contactid,firstname,lastname,emailaddress1,new_szvidnumber";
-            
-            // Create request message with headers to avoid race conditions on shared HttpClient
-            using var request = new HttpRequestMessage(HttpMethod.Get, query);
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
-            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-            
-            var response = await _httpClient.SendAsync(request);
-            
-            if (!response.IsSuccessStatusCode)
+
+            // Step 1: Get the external identity to find the ContactId
+            var identityQuery = $"{_config.ApiEndpoint}/api/data/v9.2/adx_externalidentities?$filter=adx_username eq '{userNameIdentifier}'&$select=_adx_contactid_value";
+
+            using var identityRequest = new HttpRequestMessage(HttpMethod.Get, identityQuery);
+            identityRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+            identityRequest.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+            var identityResponse = await _httpClient.SendAsync(identityRequest);
+            identityResponse.EnsureSuccessStatusCode();
+
+            var identityJson = await identityResponse.Content.ReadAsStringAsync();
+
+            // Parse the JSON response
+            using JsonDocument doc = JsonDocument.Parse(identityJson);
+            var values = doc.RootElement.GetProperty("value");
+
+            if (values.GetArrayLength() == 0)
             {
-                _logger.LogError("Dataverse API request failed with status code: {StatusCode}", response.StatusCode);
+                // No external identity found for this username
                 return null;
             }
 
-            var content = await response.Content.ReadAsStringAsync();
-            var dataverseResponse = JsonSerializer.Deserialize<DataverseContactResponse>(content, new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            });
+            // Get the first result
+            var identity = values[0];
 
-            if (dataverseResponse?.Value == null || !dataverseResponse.Value.Any())
+            // Get the contact ID - note the underscore prefix and _value suffix
+            Guid contactId = identity.GetProperty("_adx_contactid_value").GetGuid();
+
+            // Step 2: Query the contact using the contactId
+            var contactQuery = $"{_config.ApiEndpoint}/api/data/v9.2/contacts({contactId})?$select=contactid,firstname,lastname,emailaddress1,uszv_szvidnumber";
+
+            using var contactRequest = new HttpRequestMessage(HttpMethod.Get, contactQuery);
+            contactRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+            contactRequest.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+            var contactResponse = await _httpClient.SendAsync(contactRequest);
+            contactResponse.EnsureSuccessStatusCode();
+
+            var contactJson = await contactResponse.Content.ReadAsStringAsync();
+            // Parse contact data as needed
+      
+            // Extract fields with null checking
+            var contactData = JsonSerializer.Deserialize<ContactDTO>(contactJson);
+
+            if (contactData == null)
             {
                 _logger.LogWarning("No contact found in Dataverse for user: {UserNameIdentifier}", userNameIdentifier);
                 return null;
             }
 
-            // Map the first contact to our DTO
-            var contact = dataverseResponse.Value.First();
+            // Map the first contact to our DTO  
             var userSession = new UserSessionDTO
             {
                 SessionId = Guid.NewGuid().ToString(),
                 UserNameIdentifier = userNameIdentifier,
                 Contact = new ContactDTO
                 {
-                    ContactId = contact.ContactId ?? string.Empty,
-                    FirstName = contact.FirstName ?? string.Empty,
-                    LastName = contact.LastName ?? string.Empty,
-                    Email = contact.EmailAddress1 ?? string.Empty,
-                    SZVIdNumber = contact.SZVIdNumber ?? string.Empty,
-                    UserNameIdentifier = userNameIdentifier
+                    ContactId = contactData.ContactId ?? Guid.Empty,
+                    FirstName = contactData.FirstName ?? string.Empty,
+                    LastName = contactData.LastName ?? string.Empty,
+                    Email = contactData.Email ?? string.Empty,
+                    SZVIdNumber = contactData.SZVIdNumber ?? string.Empty 
                 },
                 CreatedAt = DateTime.UtcNow,
                 LastAccessedAt = DateTime.UtcNow,
@@ -207,7 +226,7 @@ public class DataVerseRequest : IDataVerseRequest
         [JsonPropertyName("emailaddress1")]
         public string? EmailAddress1 { get; set; }
         
-        [JsonPropertyName("new_szvidnumber")]
+        [JsonPropertyName("uszv_szvidnumber")]
         public string? SZVIdNumber { get; set; }
     }
 

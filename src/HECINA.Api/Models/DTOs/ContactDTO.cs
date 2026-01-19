@@ -1,3 +1,7 @@
+using HECINA.Api.Models.DTOs;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+
 namespace HECINA.Api.Models.DTOs;
 
 /// <summary>
@@ -5,33 +9,20 @@ namespace HECINA.Api.Models.DTOs;
 /// </summary>
 public class ContactDTO
 {
-    /// <summary>
-    /// Unique identifier for the contact
-    /// </summary>
-    public string ContactId { get; set; } = string.Empty;
+    [JsonPropertyName("contactid")]
+    public Guid? ContactId { get; set; }
 
-    /// <summary>
-    /// First name of the contact
-    /// </summary>
-    public string FirstName { get; set; } = string.Empty;
+    [JsonPropertyName("firstname")]
+    public string? FirstName { get; set; }
 
-    /// <summary>
-    /// Last name of the contact
-    /// </summary>
-    public string LastName { get; set; } = string.Empty;
+    [JsonPropertyName("lastname")]
+    public string? LastName { get; set; }
 
-    /// <summary>
-    /// Email address of the contact
-    /// </summary>
-    public string Email { get; set; } = string.Empty;
+    [JsonPropertyName("emailaddress1")]
+    public string? Email { get; set; }
 
-    /// <summary>
-    /// SZV Identification Number - used for authorization validation
-    /// </summary>
-    public string SZVIdNumber { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Azure AD B2C user identifier (subject claim)
-    /// </summary>
-    public string UserNameIdentifier { get; set; } = string.Empty;
+    [JsonPropertyName("uszv_szvidnumber")]
+    public string? SZVIdNumber { get; set; }
 }
+
+ 
